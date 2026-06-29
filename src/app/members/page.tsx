@@ -8,6 +8,25 @@ export default function MembersPage() {
 
     useEffect(() => {
         fetchMembers();
+
+        const channel = supabase
+            .channel("live-device-status")
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "device_status",
+                },
+                () => {
+                    fetchMembers();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const fetchMembers = async () => {
@@ -23,11 +42,11 @@ export default function MembersPage() {
         setMembers(data || []);
     };
 
-    const sendCommand = async (memberId: string, command: string) => {
-        const { error } = await supabase.from("device_commands").insert([
+    const sendCommand = async (memberId: string, action: string) => {
+        const { error } = await supabase.from("commands").insert([
             {
                 member_id: memberId,
-                command,
+                action,
             },
         ]);
 
@@ -36,7 +55,7 @@ export default function MembersPage() {
             return;
         }
 
-        alert(`${command} command sent`);
+        alert(`${action} command sent`);
     };
 
     return (
@@ -55,10 +74,12 @@ export default function MembersPage() {
                             <h2 className="text-2xl font-semibold">{member.name}</h2>
 
                             <div className="mt-3 space-y-1 text-zinc-300">
+                                <p>🔐 Family Code: {member.family_code}</p>
+                                <p>🆔 Member Code: {member.member_code}</p>
                                 <p>📱 Phone: {member.phone}</p>
                                 <p>📲 Device: {member.device_name}</p>
                                 <p>🌐 Status: {status?.connection_status || "Not Connected"}</p>
-                                <p>🔋 Battery: {status?.battery || "N/A"}%</p>
+                                <p>🔋 Battery: {status?.battery ?? "N/A"}%</p>
                                 <p>⏰ Last Seen: {status?.last_seen || "Never"}</p>
                             </div>
 
@@ -71,10 +92,17 @@ export default function MembersPage() {
                                 </button>
 
                                 <button
-                                    onClick={() => sendCommand(member.id, "stop_ring")}
+                                    onClick={() => sendCommand(member.id, "stop")}
                                     className="px-4 py-2 bg-green-600 rounded-xl"
                                 >
                                     🛑 Stop
+                                </button>
+
+                                <button
+                                    onClick={() => sendCommand(member.id, "theft")}
+                                    className="px-4 py-2 bg-red-600 rounded-xl"
+                                >
+                                    🚨 Theft Mode
                                 </button>
 
                                 <a
@@ -82,13 +110,6 @@ export default function MembersPage() {
                                     className="px-4 py-2 bg-white text-black rounded-xl"
                                 >
                                     📍 Track
-                                </a>
-
-                                <a
-                                    href={`/theft-mode?member=${member.id}`}
-                                    className="px-4 py-2 bg-red-600 rounded-xl"
-                                >
-                                    🚨 Theft Mode
                                 </a>
                             </div>
                         </div>
