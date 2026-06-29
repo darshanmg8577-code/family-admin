@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 
 export default async function Dashboard() {
   const { count: familyCount } = await supabase
@@ -8,7 +9,7 @@ export default async function Dashboard() {
   const { count: onlineCount } = await supabase
     .from("device_status")
     .select("*", { count: "exact", head: true })
-    .eq("is_online", true);
+    .eq("connection_status", "online");
 
   const { count: theftCount } = await supabase
     .from("theft_events")
@@ -43,14 +44,14 @@ export default async function Dashboard() {
 
       <div className="grid md:grid-cols-2 gap-6">
         {cards.map((card, i) => (
-          <a
+          <Link
             key={i}
             href={card.link}
             className="p-6 rounded-2xl bg-zinc-900 hover:bg-zinc-800 transition"
           >
             <h2 className="text-xl font-semibold">{card.title}</h2>
             <p className="text-3xl mt-3">{card.value}</p>
-          </a>
+          </Link>
         ))}
       </div>
     </main>
